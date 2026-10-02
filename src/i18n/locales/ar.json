@@ -1,0 +1,21 @@
+{
+  "brand": "محتوى",
+  "home": "الرئيسية",
+  "title": "بوابة المحتوى",
+  "description": "إدارة محتواك بسهولة باللغتين العربية والإنجليزية.",
+  "language": "اللغة",
+  "arabic": "العربية",
+  "english": "English",
+  "action": "استكشف المحتوى",
+  "cardsLabel": "نماذج من المحتوى",
+  "cardOneTitle": "قصة العلامة",
+  "cardOneDescription": "عرّف جمهورك بهوية مشروعك من خلال قصة قصيرة، إنسانية، وسهلة التذكّر.",
+  "cardOneCategory": "تحرير",
+  "cardTwoTitle": "حملة الأسبوع",
+  "cardTwoDescription": "اجمع الرسائل المهمة في مكان واحد، وامنح فريقك رؤية أوضح للخطوة التالية.",
+  "cardTwoCategory": "حملات",
+  "cardThreeTitle": "رؤية أعمق",
+  "cardThreeDescription": "حوّل الملاحظات اليومية إلى معرفة تساعدك على اتخاذ قرارات أفضل.",
+  "cardThreeCategory": "رؤى",
+  "direction": "اتجاه الصفحة: من اليمين إلى اليسار"
+}

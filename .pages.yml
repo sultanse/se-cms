@@ -1,0 +1,132 @@
+content:
+  - name: translations
+    label: Translations
+    type: group
+    items:
+      - name: arabic
+        label: العربية
+        type: file
+        path: src/i18n/locales/ar.json
+        format: json
+        fields:
+          - name: brand
+            label: اسم العلامة
+            type: string
+          - name: home
+            label: الرئيسية
+            type: string
+          - name: title
+            label: العنوان
+            type: string
+          - name: description
+            label: الوصف
+            type: text
+          - name: language
+            label: اللغة
+            type: string
+          - name: arabic
+            label: اسم العربية
+            type: string
+          - name: english
+            label: اسم الإنجليزية
+            type: string
+          - name: action
+            label: زر الإجراء
+            type: string
+          - name: cardsLabel
+            label: عنوان البطاقات
+            type: string
+          - name: cardOneTitle
+            label: عنوان البطاقة الأولى
+            type: string
+          - name: cardOneDescription
+            label: وصف البطاقة الأولى
+            type: text
+          - name: cardOneCategory
+            label: تصنيف البطاقة الأولى
+            type: string
+          - name: cardTwoTitle
+            label: عنوان البطاقة الثانية
+            type: string
+          - name: cardTwoDescription
+            label: وصف البطاقة الثانية
+            type: text
+          - name: cardTwoCategory
+            label: تصنيف البطاقة الثانية
+            type: string
+          - name: cardThreeTitle
+            label: عنوان البطاقة الثالثة
+            type: string
+          - name: cardThreeDescription
+            label: وصف البطاقة الثالثة
+            type: text
+          - name: cardThreeCategory
+            label: تصنيف البطاقة الثالثة
+            type: string
+          - name: direction
+            label: وصف اتجاه الصفحة
+            type: string
+
+      - name: english
+        label: English
+        type: file
+        path: src/i18n/locales/en.json
+        format: json
+        fields:
+          - name: brand
+            label: Brand name
+            type: string
+          - name: home
+            label: Home
+            type: string
+          - name: title
+            label: Title
+            type: string
+          - name: description
+            label: Description
+            type: text
+          - name: language
+            label: Language
+            type: string
+          - name: arabic
+            label: Arabic language name
+            type: string
+          - name: english
+            label: English language name
+            type: string
+          - name: action
+            label: Action button
+            type: string
+          - name: cardsLabel
+            label: Cards heading
+            type: string
+          - name: cardOneTitle
+            label: First card title
+            type: string
+          - name: cardOneDescription
+            label: First card description
+            type: text
+          - name: cardOneCategory
+            label: First card category
+            type: string
+          - name: cardTwoTitle
+            label: Second card title
+            type: string
+          - name: cardTwoDescription
+            label: Second card description
+            type: text
+          - name: cardTwoCategory
+            label: Second card category
+            type: string
+          - name: cardThreeTitle
+            label: Third card title
+            type: string
+          - name: cardThreeDescription
+            label: Third card description
+            type: text
+          - name: cardThreeCategory
+            label: Third card category
+            type: string
+          - name: direction
+            label: Page direction description
+            type: string
