@@ -1,34 +1,39 @@
-import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
+import { Link } from "react-router"
 
 import { Button } from "@/components/ui/button"
-import i18n, { languageDirection, type SupportedLanguage } from "@/i18n/i18n"
+import GithubLoginButton from "@/components/github-login-button"
+import { useLanguage } from "@/hooks/use-language"
 
 export function App() {
   const { t } = useTranslation()
-  const language = i18n.language as SupportedLanguage
-
-  useEffect(() => {
-    document.documentElement.lang = language
-    document.documentElement.dir = languageDirection[language]
-    localStorage.setItem("language", language)
-  }, [language])
-
-  const changeLanguage = (nextLanguage: SupportedLanguage) => {
-    void i18n.changeLanguage(nextLanguage)
-  }
+  const { language, changeLanguage } = useLanguage()
 
   return (
     <main className="min-h-svh bg-[radial-gradient(circle_at_top,var(--color-muted),transparent_42%)] px-5 py-6 sm:px-8 lg:px-12">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-16">
-        <header className="flex items-center justify-between gap-6 border-b border-border/70 pb-5">
+        <header className="relative flex items-center justify-between gap-6 border-b border-border/70 pb-5">
           <a className="text-lg font-semibold tracking-tight" href="#top">
             {t("brand")}
           </a>
-          <nav className="flex items-center gap-4" aria-label={t("home")}>
-            <span className="hidden text-sm text-muted-foreground sm:inline">
+          <nav
+            className="absolute left-1/2 flex -translate-x-1/2 items-center gap-4"
+            aria-label={t("home")}
+          >
+            <Link
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              to="/"
+            >
               {t("home")}
-            </span>
+            </Link>
+            <Link
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              to="/translations"
+            >
+              محرر الترجمات
+            </Link>
+          </nav>
+          <div className="flex items-center gap-2">
             <div
               className="flex gap-1 rounded-full border border-border bg-background/70 p-1"
               role="group"
@@ -53,7 +58,7 @@ export function App() {
                 {t("english")}
               </Button>
             </div>
-          </nav>
+          </div>
         </header>
 
         <section
@@ -86,7 +91,9 @@ export function App() {
             >
               {t("cardsLabel")}
             </h2>
-            <span className="text-xs text-muted-foreground">{t("language")}</span>
+            <span className="text-xs text-muted-foreground">
+              {t("language")}
+            </span>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             <article className="flex min-h-64 flex-col justify-between rounded-3xl border border-border bg-card p-6 transition-colors hover:bg-muted/60">
