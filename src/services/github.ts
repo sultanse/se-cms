@@ -35,17 +35,6 @@ function fromBase64(value: string) {
   return Uint8Array.from(binary, (character) => character.charCodeAt(0))
 }
 
-export type GithubAccount = {
-  login: string
-  avatar_url: string
-}
-
-// The token's owner, who authors every branch, commit and pull request
-export async function getAccount(): Promise<GithubAccount> {
-  const { data } = await github().rest.users.getAuthenticated()
-  return { login: data.login, avatar_url: data.avatar_url }
-}
-
 export type Repository = {
   id: number
   name: string
@@ -203,6 +192,8 @@ export async function findOpenLocalePullRequest(owner: string, repo: string) {
     baseBranch: pullRequest.base.ref,
     pullRequestUrl: pullRequest.html_url,
     pullRequestNumber: pullRequest.number,
+    pullRequestTitle: pullRequest.title,
+    pullRequestCreatedAt: pullRequest.created_at,
   }
 }
 
@@ -339,7 +330,12 @@ export async function createLocalePullRequest({
     body: "Translation updates submitted from the locale editor.",
   })
 
-  return { url: data.html_url, number: data.number }
+  return {
+    url: data.html_url,
+    number: data.number,
+    title: data.title,
+    createdAt: data.created_at,
+  }
 }
 
 export function updateLocaleBranch(localeCommit: LocaleCommit) {
