@@ -1,5 +1,5 @@
 {
-  "brand": "Mohtawa",
+  "brand": "tarjm",
   "home": "Home",
   "title": "Content portal",
   "description": "Manage your content easily in Arabic and English.",
@@ -96,5 +96,8 @@
     "connecting": "Connecting",
     "loginWithGithub": "Sign in with GitHub"
   },
-  "footer": ["Privacy Policy", "Terms of Service"]
+  "footer": [
+    "Privacy Policy",
+    "Terms of Service"
+  ]
 }
