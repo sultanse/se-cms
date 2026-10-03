@@ -92,7 +92,9 @@ export async function fetchRepositories() {
       getAllRepositories(),
     ])
     if (repositories.length === 0) {
-      throw new Error("GITHUB_TOKEN has no access to any repositories")
+      throw new Error(
+        "GITHUB_TOKEN has no access to any repositories with ar.json and en.json"
+      )
     }
     const platforms = repositories.map(platformFromRepository)
 
