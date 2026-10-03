@@ -7,7 +7,6 @@ import { Spinner } from "@/components/ui/spinner"
 import {
   fetchRepositories,
   githubStore,
-  refreshPullRequestStatus,
   type Platform,
 } from "@/stores/github-store"
 import {
@@ -19,7 +18,10 @@ import {
 } from "@/stores/translation-editor-store"
 import FileSections from "@/components/translation-editor/file-sections"
 import TranslationEditorHeader from "@/components/translation-editor/header"
-import TranslationEditor from "@/components/translation-editor/translation-editor"
+import PullRequestPanel from "@/components/translation-editor/pull-request-panel"
+import TranslationEditor, {
+  type EditFilter,
+} from "@/components/translation-editor/translation-editor"
 
 const ROOT_SECTION = "__root__"
 
@@ -87,6 +89,7 @@ function TranslationEditorContent({ platforms }: { platforms: Platform[] }) {
   )
   const [activeSection, setActiveSection] = useState<string | null>(null)
   const [query, setQuery] = useState("")
+  const [filter, setFilter] = useState<EditFilter>("all")
 
   const platform = platforms.find(({ id }) => id === platformId) ?? platforms[0]
   const editorBusy =
@@ -103,7 +106,22 @@ function TranslationEditorContent({ platforms }: { platforms: Platform[] }) {
     [entries]
   )
   const sections = Object.keys(sectionCounts)
-  const editCount = Object.keys(edits).length
+  const sectionEditCounts = useMemo(
+    () =>
+      entries.reduce<Record<string, number>>((counts, { key, path }) => {
+        if (!(key in edits)) return counts
+        const section = sectionForPath(path)
+        counts[section] = (counts[section] ?? 0) + 1
+        return counts
+      }, {}),
+    [edits, entries]
+  )
+  const sectionEntries = activeSection
+    ? (sectionCounts[activeSection] ?? 0)
+    : entries.length
+  const sectionEdits = activeSection
+    ? (sectionEditCounts[activeSection] ?? 0)
+    : Object.keys(edits).length
 
   const rows = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase()
@@ -117,13 +135,14 @@ function TranslationEditorContent({ platforms }: { platforms: Platform[] }) {
         edited: entry.key in edits,
       }))
       .filter(
-        ({ entry, values }) =>
-          !normalizedQuery ||
-          `${entry.key} ${values.ar} ${values.en}`
-            .toLocaleLowerCase()
-            .includes(normalizedQuery)
+        ({ entry, values, edited }) =>
+          (filter === "all" || edited) &&
+          (!normalizedQuery ||
+            `${entry.key} ${values.ar} ${values.en}`
+              .toLocaleLowerCase()
+              .includes(normalizedQuery))
       )
-  }, [activeSection, edits, entries, query])
+  }, [activeSection, edits, entries, filter, query])
 
   const updateEntry = (
     entry: TranslationEntry,
@@ -159,13 +178,17 @@ function TranslationEditorContent({ platforms }: { platforms: Platform[] }) {
       id: null,
       label: t("translationEditor.allTranslations"),
       count: entries.length,
+      editCount: Object.keys(edits).length,
     },
     ...sections.map((id) => ({
       id,
       label: id === ROOT_SECTION ? "root" : id,
       count: sectionCounts[id],
+      editCount: sectionEditCounts[id] ?? 0,
     })),
   ]
+  const activeSectionLink =
+    sectionLinks.find(({ id }) => id === activeSection) ?? sectionLinks[0]
 
   useEffect(() => {
     translationEditorStore.setState((state) => {
@@ -182,10 +205,15 @@ function TranslationEditorContent({ platforms }: { platforms: Platform[] }) {
   }, [platforms])
 
   return (
-    <div className="flex min-h-svh flex-col bg-muted" dir={direction}>
+    <div
+      dir={direction}
+      // Spacing and column widths scale with the viewport instead of jumping
+      // at breakpoints. Sticky columns sit below the 3.75rem header.
+      className="flex min-h-svh flex-col bg-muted [--page-gutter:clamp(1rem,2.5vw,1.5rem)] [--sticky-max-h:calc(100svh-3.75rem-2*var(--page-gutter))] [--sticky-top:calc(3.75rem+var(--page-gutter))]"
+    >
       <TranslationEditorHeader busy={editorBusy} />
 
-      <div className="mx-auto grid w-full max-w-[1620px] flex-1 grid-cols-[minmax(0,1fr)] items-start gap-6 p-4 md:p-6 lg:grid-cols-[184px_minmax(0,1fr)]">
+      <div className="mx-auto grid w-full max-w-[1620px] flex-1 grid-cols-[minmax(0,1fr)] items-start gap-[clamp(0.75rem,1.5vw,1rem)] p-(--page-gutter) lg:grid-cols-[minmax(0,1fr)_clamp(17.5rem,20vw,18.75rem)] xl:grid-cols-[clamp(10rem,14vw,12.5rem)_minmax(0,1fr)_clamp(17.5rem,20vw,18.75rem)]">
         <FileSections
           sectionLinks={sectionLinks}
           activeSection={activeSection}
@@ -194,21 +222,19 @@ function TranslationEditorContent({ platforms }: { platforms: Platform[] }) {
           onSectionChange={setActiveSection}
         />
 
-        <main className="flex min-w-0 flex-col gap-5">
+        <PullRequestPanel busy={editorBusy} />
+
+        <main className="flex min-w-0 flex-col lg:col-start-1 lg:row-start-2 xl:col-start-2 xl:row-start-1">
           <TranslationEditor
             rows={rows}
-            direction={direction}
-            overview={{
-              textValues: entries.length,
-              sectionsCount: sections.length,
-              visibleResults: rows.length,
-              unsavedValues: editCount,
-              pullRequestStatus: platform.pullRequestStatus,
-              onRefreshStatus: platform.pullRequestNumber
-                ? () => refreshPullRequestStatus(platform.id)
-                : undefined,
-            }}
-            activeSection={activeSection}
+            title={activeSectionLink.label}
+            keyPrefixLength={
+              activeSection && activeSection !== ROOT_SECTION ? 1 : 0
+            }
+            valuesCount={sectionEntries}
+            editedCount={sectionEdits}
+            filter={filter}
+            onFilterChange={setFilter}
             query={query}
             onQueryChange={setQuery}
             onEntryChange={updateEntry}

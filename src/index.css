@@ -43,6 +43,9 @@
   --sidebar-accent-foreground: #374151;
   --sidebar-border: #d1d5db;
   --sidebar-ring: #6366f1;
+  --field: oklch(0.922 0 0);
+  --divider: #e5e7eb;
+  --field-ring: oklch(0.708 0 0);
   --font-sans: "IBM Plex Sans Arabic", sans-serif;
   --font-display: "IBM Plex Sans Arabic", sans-serif;
   --font-text: "IBM Plex Sans Arabic", sans-serif;
@@ -106,6 +109,9 @@
   --sidebar-accent-foreground: #d1d5db;
   --sidebar-border: #4b5563;
   --sidebar-ring: #818cf8;
+  --field: oklch(1 0 0 / 15%);
+  --divider: #374151;
+  --field-ring: oklch(0.556 0 0);
   --font-sans: "IBM Plex Sans Arabic", sans-serif;
   --font-display: "IBM Plex Sans Arabic", sans-serif;
   --font-text: "IBM Plex Sans Arabic", sans-serif;
@@ -154,6 +160,9 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-field: var(--field);
+  --color-divider: var(--divider);
+  --color-field-ring: var(--field-ring);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);

@@ -141,3 +141,18 @@ export const translationEditorStore = createStore<TranslationEditorState>({
   edits: {},
   draftInitialized: false,
 })
+
+// Persists unsaved edits per platform. Nothing is written until the draft has
+// been read, so the initial empty edits can't wipe a stored draft.
+let persistedDraft: { platformId: string; edits: Edits } | null = null
+translationEditorStore.subscribe(({ draftInitialized, platformId, edits }) => {
+  if (!draftInitialized || !platformId) return
+  if (
+    persistedDraft?.platformId === platformId &&
+    persistedDraft.edits === edits
+  ) {
+    return
+  }
+  persistedDraft = { platformId, edits }
+  writeDraft(platformId, edits)
+})

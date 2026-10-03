@@ -4,13 +4,11 @@ import {
   createLocaleBranch,
   createLocalePullRequest,
   findOpenLocalePullRequest,
-  getAccount,
   getAllRepositories,
   getPullRequestStatus,
   getRepositoryLocales,
   isUnauthorized,
   updateLocaleBranch,
-  type GithubAccount,
   type JsonObject,
   type PullRequestStatus,
 } from "@/services/github"
@@ -36,6 +34,8 @@ export type Platform = {
   baseBranch: string | null
   pullRequestUrl: string | null
   pullRequestNumber: number | null
+  pullRequestTitle: string | null
+  pullRequestCreatedAt: string | null
   pullRequestStatus: PullRequestStatus | null
 }
 
@@ -52,12 +52,13 @@ function platformFromRepository(repository: Repositories[number]): Platform {
     baseBranch: null,
     pullRequestUrl: null,
     pullRequestNumber: null,
+    pullRequestTitle: null,
+    pullRequestCreatedAt: null,
     pullRequestStatus: null,
   }
 }
 
 export type GithubState = {
-  account: GithubAccount | null
   repositories: Repositories
   platforms: Platform[]
   loading: boolean
@@ -67,7 +68,6 @@ export type GithubState = {
 }
 
 export const githubStore = createStore<GithubState>({
-  account: null,
   repositories: [],
   platforms: [],
   loading: false,
@@ -88,10 +88,7 @@ export async function fetchRepositories() {
   }))
 
   try {
-    const [account, repositories] = await Promise.all([
-      getAccount(),
-      getAllRepositories(),
-    ])
+    const repositories = await getAllRepositories()
     if (repositories.length === 0) {
       throw new Error(
         "GITHUB_TOKEN has no access to any repositories with ar.json and en.json"
@@ -101,7 +98,6 @@ export async function fetchRepositories() {
 
     githubStore.setState((state) => ({
       ...state,
-      account,
       repositories,
       platforms,
     }))
@@ -232,6 +228,8 @@ export async function startPlatformEditing(platformId: string) {
               baseBranch,
               pullRequestUrl: null,
               pullRequestNumber: null,
+              pullRequestTitle: null,
+              pullRequestCreatedAt: null,
               pullRequestStatus: null,
             }
           : item
@@ -248,6 +246,26 @@ export async function startPlatformEditing(platformId: string) {
           : state.sessionLoadingPlatformId,
     }))
   }
+}
+
+export function cancelPlatformEditing(platformId: string) {
+  githubStore.setState((state) => ({
+    ...state,
+    platforms: state.platforms.map((platform) =>
+      platform.id === platformId
+        ? {
+            ...platform,
+            branchName: null,
+            baseBranch: null,
+            pullRequestUrl: null,
+            pullRequestNumber: null,
+            pullRequestTitle: null,
+            pullRequestCreatedAt: null,
+            pullRequestStatus: null,
+          }
+        : platform
+    ),
+  }))
 }
 
 export async function submitPlatformPullRequest(
@@ -299,6 +317,8 @@ export async function submitPlatformPullRequest(
                 ...item,
                 pullRequestUrl: result.url,
                 pullRequestNumber: result.number,
+                pullRequestTitle: result.title,
+                pullRequestCreatedAt: result.createdAt,
                 pullRequestStatus: "open",
               }
             : item
