@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next"
 import { Link } from "react-router"
 
 import { Button } from "@/components/ui/button"
-import GithubLoginButton from "@/components/github-login-button"
 import { useLanguage } from "@/hooks/use-language"
 
 export function App() {
@@ -13,7 +12,16 @@ export function App() {
     <main className="min-h-svh bg-[radial-gradient(circle_at_top,var(--color-muted),transparent_42%)] px-5 py-6 sm:px-8 lg:px-12">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-16">
         <header className="relative flex items-center justify-between gap-6 border-b border-border/70 pb-5">
-          <a className="text-lg font-semibold tracking-tight" href="#top">
+          <a
+            className="flex items-center gap-2 text-lg font-semibold tracking-tight"
+            href="#top"
+          >
+            <img
+              src="/app-icon.svg"
+              alt=""
+              aria-hidden="true"
+              className="size-8 rounded-[10px]"
+            />
             {t("brand")}
           </a>
           <nav

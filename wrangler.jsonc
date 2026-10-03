@@ -1,0 +1,27 @@
+{
+  "name": "se-cms",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    // Everything else is served straight from dist/ without invoking the Worker
+    "run_worker_first": ["/api/*"],
+  },
+  // Secrets: GITHUB_APP_CLIENT_ID and SESSION_SECRET (`wrangler secret put`;
+  // `wrangler dev` reads them from .env)
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+      "persist": true,
+    },
+    "traces": {
+      "enabled": false,
+      "head_sampling_rate": 1,
+      "persist": true,
+    },
+  },
+}

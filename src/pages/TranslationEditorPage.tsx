@@ -31,17 +31,17 @@ function sectionForPath(path: string[]) {
 
 function TranslationEditorPage() {
   const { direction } = useLanguage()
-  const accessToken = useStore(githubAuthStore, (state) => state.accessToken)
+  const signedIn = useStore(githubAuthStore, (state) => state.user !== null)
   const platforms = useStore(githubStore, (state) => state.platforms)
   const githubLoading = useStore(githubStore, (state) => state.loading)
   const { t } = useTranslation()
 
   useEffect(() => {
-    if (!accessToken) return
+    if (!signedIn) return
     void fetchRepositories()
-  }, [accessToken])
+  }, [signedIn])
 
-  if (!accessToken) {
+  if (!signedIn) {
     return (
       <div
         dir={direction}

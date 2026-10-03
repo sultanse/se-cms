@@ -5,7 +5,6 @@ import { defineConfig } from "vite"
 
 // https://vite.dev/config/
 export default defineConfig({
-  envPrefix: ["VITE_", "GITHUB_APP_CLIENT_ID"],
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -14,12 +13,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // GitHub's device-flow endpoints don't support CORS, so proxy them same-origin
-      "/github-oauth": {
-        target: "https://github.com",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/github-oauth/, "/login"),
-      },
+      // GitHub auth and API calls run in the Worker; start it with `npm run dev:worker`
+      "/api": "http://localhost:8787",
     },
   },
 })

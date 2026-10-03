@@ -26,12 +26,12 @@ function GithubMark() {
 function GithubLoginButton() {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
-  const { accessToken, user, deviceCode, loading, error } = useStore(
+  const { user, deviceCode, loading, error } = useStore(
     githubAuthStore,
     (state) => state
   )
 
-  if (accessToken && user) {
+  if (user) {
     return (
       <div className="flex items-center gap-2">
         <span className="hidden text-sm text-muted-foreground sm:inline">
