@@ -1,13 +1,37 @@
-import { githubApi } from "@/stores/github-auth-store"
-
-// All GitHub calls run in the Worker (worker/index.ts), which holds the user's
-// token; these wrappers only forward arguments to /api/github/<action>.
-function callGithub<T>(action: string, args: Record<string, unknown> = {}) {
-  return githubApi<T>(`/api/github/${action}`, args)
+// All GitHub calls run in the Worker (worker/index.ts), which holds the
+// fine-grained access token; these wrappers only forward arguments to
+// /api/github/<action>.
+async function callGithub<T>(
+  action: string,
+  args: Record<string, unknown> = {}
+): Promise<T> {
+  const response = await fetch(`/api/github/${action}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(args),
+  })
+  const payload: unknown = await response.json().catch(() => null)
+  if (!response.ok) {
+    const message =
+      payload !== null && typeof payload === "object" && "error" in payload
+        ? String(payload.error)
+        : `GitHub request failed (${response.status})`
+    throw new Error(message)
+  }
+  return payload as T
 }
 
 type TranslationLocale = "ar" | "en"
 export type JsonObject = { [key: string]: unknown }
+
+export type GithubAccount = {
+  login: string
+  avatar_url: string
+}
+
+export function getAccount() {
+  return callGithub<GithubAccount>("account")
+}
 
 export type Repository = {
   id: number

@@ -1,17 +1,11 @@
 import { Octokit, RequestError } from "octokit"
 
+// GITHUB_TOKEN is a fine-grained personal access token. Its repository
+// selection and permissions (Contents and Pull requests: read and write) are
+// the only limit on what the editor can reach.
 type Env = {
-  GITHUB_APP_CLIENT_ID: string
-  SESSION_SECRET: string
+  GITHUB_TOKEN: string
 }
-
-type GithubUser = {
-  login: string
-  avatar_url: string
-}
-
-type Session = { token: string; user: GithubUser; exp: number }
-type DeviceLogin = { deviceCode: string; exp: number }
 
 class HttpError extends Error {
   status: number
@@ -22,204 +16,19 @@ class HttpError extends Error {
   }
 }
 
-// --- Responses & cookies ---------------------------------------------------
-
-const sessionCookie = "gh_session"
-const deviceCookie = "gh_device"
-const sessionMaxAge = 30 * 24 * 60 * 60
-
-function json(body: unknown, status = 200, cookies: string[] = []) {
-  const headers = new Headers({
-    "content-type": "application/json",
-    "cache-control": "no-store",
-  })
-  for (const cookie of cookies) headers.append("set-cookie", cookie)
-  return new Response(JSON.stringify(body), { status, headers })
-}
-
-function setCookie(name: string, value: string, maxAge: number) {
-  return `${name}=${value}; Path=/api; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`
-}
-
-function clearCookie(name: string) {
-  return setCookie(name, "", 0)
-}
-
-function readCookie(request: Request, name: string) {
-  for (const part of request.headers.get("cookie")?.split(";") ?? []) {
-    const [key, ...value] = part.trim().split("=")
-    if (key === name) return value.join("=")
-  }
-  return null
-}
-
-// Cookies are AES-GCM sealed with a key derived from SESSION_SECRET, so the
-// browser can neither read the GitHub token nor forge a session.
-async function cookieKey(secret: string) {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(secret)
-  )
-  return crypto.subtle.importKey("raw", digest, "AES-GCM", false, [
-    "encrypt",
-    "decrypt",
-  ])
-}
-
-function toBase64Url(bytes: Uint8Array) {
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "")
-}
-
-function fromBase64Url(value: string) {
-  const binary = atob(value.replace(/-/g, "+").replace(/_/g, "/"))
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0))
-}
-
-async function seal(value: { exp: number }, secret: string) {
-  const iv = crypto.getRandomValues(new Uint8Array(12))
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
-    await cookieKey(secret),
-    new TextEncoder().encode(JSON.stringify(value))
-  )
-  const sealed = new Uint8Array(iv.length + ciphertext.byteLength)
-  sealed.set(iv)
-  sealed.set(new Uint8Array(ciphertext), iv.length)
-  return toBase64Url(sealed)
-}
-
-async function unseal<T extends { exp: number }>(
-  value: string | null,
-  secret: string
-): Promise<T | null> {
-  if (!value) return null
-  try {
-    const sealed = fromBase64Url(value)
-    const plaintext = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: sealed.slice(0, 12) },
-      await cookieKey(secret),
-      sealed.slice(12)
-    )
-    const payload = JSON.parse(new TextDecoder().decode(plaintext)) as T
-    return payload.exp > Date.now() ? payload : null
-  } catch {
-    return null
-  }
-}
-
-function readSession(request: Request, env: Env) {
-  return unseal<Session>(readCookie(request, sessionCookie), env.SESSION_SECRET)
-}
-
-// --- Device-flow login -----------------------------------------------------
-
-async function githubLogin<T>(path: string, params: Record<string, string>) {
-  const response = await fetch(`https://github.com/login${path}`, {
-    method: "POST",
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
     headers: {
-      accept: "application/json",
-      "content-type": "application/x-www-form-urlencoded",
+      "content-type": "application/json",
+      "cache-control": "no-store",
     },
-    body: new URLSearchParams(params).toString(),
   })
-  const payload = (await response.json()) as T & {
-    error?: string
-    error_description?: string
-  }
-  if (!response.ok) {
-    throw new HttpError(
-      502,
-      payload.error_description ?? "GitHub authentication failed"
-    )
-  }
-  return payload
 }
 
-async function startDeviceLogin(env: Env) {
-  const device = await githubLogin<{
-    device_code: string
-    user_code: string
-    verification_uri: string
-    expires_in: number
-    interval?: number
-  }>("/device/code", { client_id: env.GITHUB_APP_CLIENT_ID })
-
-  const login: DeviceLogin = {
-    deviceCode: device.device_code,
-    exp: Date.now() + device.expires_in * 1000,
-  }
-  return json(
-    {
-      userCode: device.user_code,
-      verificationUri: device.verification_uri,
-      expiresIn: device.expires_in,
-      interval: device.interval ?? 5,
-    },
-    200,
-    [
-      setCookie(
-        deviceCookie,
-        await seal(login, env.SESSION_SECRET),
-        device.expires_in
-      ),
-    ]
-  )
-}
-
-async function pollDeviceLogin(request: Request, env: Env) {
-  const login = await unseal<DeviceLogin>(
-    readCookie(request, deviceCookie),
-    env.SESSION_SECRET
-  )
-  if (!login) throw new HttpError(400, "GitHub authorization expired")
-
-  const payload = await githubLogin<{
-    access_token?: string
-    expires_in?: number
-  }>("/oauth/access_token", {
-    client_id: env.GITHUB_APP_CLIENT_ID,
-    device_code: login.deviceCode,
-    grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-  })
-
-  if (
-    payload.error === "authorization_pending" ||
-    payload.error === "slow_down"
-  ) {
-    return json({ status: payload.error })
-  }
-  if (!payload.access_token) {
-    return json(
-      {
-        error:
-          payload.error_description ??
-          payload.error ??
-          "GitHub authentication failed",
-      },
-      400,
-      [clearCookie(deviceCookie)]
-    )
-  }
-
-  const { data } = await new Octokit({
-    auth: payload.access_token,
-  }).rest.users.getAuthenticated()
-  const user = { login: data.login, avatar_url: data.avatar_url }
-  // GitHub App user tokens expire (usually after 8 hours); match the cookie to it.
-  const maxAge = payload.expires_in ?? sessionMaxAge
-  const session: Session = {
-    token: payload.access_token,
-    user,
-    exp: Date.now() + maxAge * 1000,
-  }
-
-  return json({ status: "complete", user }, 200, [
-    setCookie(sessionCookie, await seal(session, env.SESSION_SECRET), maxAge),
-    clearCookie(deviceCookie),
-  ])
+function fromBase64(value: string) {
+  const binary = atob(value)
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0))
 }
 
 // --- Repository operations -------------------------------------------------
@@ -297,7 +106,7 @@ async function getTranslationFile(
         continue
       }
 
-      const bytes = fromBase64Url(data.content.replace(/\n/g, ""))
+      const bytes = fromBase64(data.content.replace(/\n/g, ""))
       const json: unknown = JSON.parse(new TextDecoder().decode(bytes))
       if (isObject(json)) return { path, sha: data.sha, json }
     } catch (error) {
@@ -361,6 +170,13 @@ const actions: Record<
   string,
   (client: Octokit, args: Args) => Promise<unknown>
 > = {
+  // The token's owner, who authors every branch, commit and pull request
+  async account(client) {
+    const { data } = await client.rest.users.getAuthenticated()
+    return { login: data.login, avatar_url: data.avatar_url }
+  },
+
+  // A fine-grained token lists only the repositories it was granted
   async repositories(client) {
     const { data } = await client.rest.repos.listForAuthenticatedUser({
       per_page: 100,
@@ -502,26 +318,10 @@ const actions: Record<
 async function route(request: Request, env: Env) {
   const { pathname } = new URL(request.url)
 
-  if (request.method === "GET" && pathname === "/api/auth/me") {
-    const session = await readSession(request, env)
-    return session
-      ? json({ user: session.user })
-      : json({ error: "Not signed in" }, 401, [clearCookie(sessionCookie)])
-  }
-
   if (request.method !== "POST") throw new HttpError(404, "Not found")
-  // Cross-site forms can't send JSON, so this plus SameSite=Lax blocks CSRF
+  // Cross-site forms can't send JSON, so they can't trigger writes
   if (!request.headers.get("content-type")?.startsWith("application/json")) {
     throw new HttpError(415, "Expected a JSON request")
-  }
-
-  if (pathname === "/api/auth/device") return startDeviceLogin(env)
-  if (pathname === "/api/auth/poll") return pollDeviceLogin(request, env)
-  if (pathname === "/api/auth/logout") {
-    return json(null, 200, [
-      clearCookie(sessionCookie),
-      clearCookie(deviceCookie),
-    ])
   }
 
   const action = pathname.match(/^\/api\/github\/(\w+)$/)?.[1]
@@ -529,33 +329,32 @@ async function route(request: Request, env: Env) {
     throw new HttpError(404, "Not found")
   }
 
-  const session = await readSession(request, env)
-  if (!session)
-    throw new HttpError(401, "Sign in with GitHub before using the editor")
-
   const args: unknown = await request.json().catch(() => null)
   if (!isObject(args)) throw new HttpError(400, "Expected a JSON object")
 
-  return json(await actions[action](new Octokit({ auth: session.token }), args))
+  // The throttling plugin queues every client's requests in module-level
+  // Bottleneck groups; the Workers runtime cancels a request that waits on
+  // another request's promise, so concurrent calls would hang.
+  const client = new Octokit({
+    auth: env.GITHUB_TOKEN,
+    throttle: { enabled: false },
+  })
+  return json(await actions[action](client, args))
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     try {
-      if (!env.GITHUB_APP_CLIENT_ID || !env.SESSION_SECRET) {
-        throw new HttpError(
-          500,
-          "GITHUB_APP_CLIENT_ID and SESSION_SECRET must be configured"
-        )
+      if (!env.GITHUB_TOKEN) {
+        throw new HttpError(500, "GITHUB_TOKEN must be configured")
       }
       return await route(request, env)
     } catch (error) {
-      // An expired or revoked token ends the session
-      if (
-        (error instanceof RequestError || error instanceof HttpError) &&
-        error.status === 401
-      ) {
-        return json({ error: error.message }, 401, [clearCookie(sessionCookie)])
+      if (error instanceof RequestError && error.status === 401) {
+        return json(
+          { error: "GITHUB_TOKEN is invalid, expired or revoked" },
+          502
+        )
       }
       if (error instanceof HttpError || error instanceof RequestError) {
         return json({ error: error.message }, error.status)

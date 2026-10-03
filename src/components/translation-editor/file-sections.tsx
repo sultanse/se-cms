@@ -1,10 +1,10 @@
-import { ChevronsUpDownIcon, LanguagesIcon, LogOutIcon } from "lucide-react"
+import { ChevronsUpDownIcon, LanguagesIcon } from "lucide-react"
 import { useStore } from "@tanstack/react-store"
 import { useTranslation } from "react-i18next"
 
 import { useLanguage } from "@/hooks/use-language"
 import { cn } from "@/lib/utils"
-import { githubAuthStore, logoutGithub } from "@/stores/github-auth-store"
+import { githubStore } from "@/stores/github-store"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -38,7 +38,7 @@ function FileSections({
 }: FileSectionsProps) {
   const { t } = useTranslation()
   const { language, changeLanguage } = useLanguage()
-  const user = useStore(githubAuthStore, (state) => state.user)
+  const user = useStore(githubStore, (state) => state.account)
 
   return (
     <aside
@@ -136,11 +136,6 @@ function FileSections({
                   : t("translationEditor.arabicOption")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={logoutGithub}>
-              <LogOutIcon className="rtl:rotate-180" />
-              {t("translationEditor.logout")}
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
