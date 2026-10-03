@@ -118,6 +118,61 @@ async function getTranslationFile(
   throw new HttpError(404, `Could not find ${locale}.json in ${owner}/${repo}`)
 }
 
+// One GraphQL alias per candidate translation path, e.g. ar0, ar1, en0, en1
+const translationCandidates = locales.flatMap((locale) =>
+  translationPaths(locale).map((path, index) => ({
+    locale,
+    alias: `${locale}${index}`,
+    path,
+  }))
+)
+
+// Lists repositories and checks the translation files on their default
+// branch in a single request, without downloading the files
+const repositoriesQuery = `
+  query {
+    viewer {
+      repositories(
+        first: 100
+        orderBy: { field: UPDATED_AT, direction: DESC }
+        affiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]
+      ) {
+        nodes {
+          databaseId
+          name
+          nameWithOwner
+          owner { login }
+          ${translationCandidates
+            .map(
+              ({ alias, path }) =>
+                `${alias}: object(expression: "HEAD:${path}") { __typename }`
+            )
+            .join("\n          ")}
+        }
+      }
+    }
+  }
+`
+
+type RepositoryNode = {
+  databaseId: number
+  name: string
+  nameWithOwner: string
+  owner: { login: string }
+  [alias: string]: unknown
+}
+
+function hasTranslationFiles(repository: RepositoryNode) {
+  return locales.every((locale) =>
+    translationCandidates.some(({ locale: candidate, alias }) => {
+      const file = repository[alias]
+      return (
+        candidate === locale && isObject(file) && file.__typename === "Blob"
+      )
+    })
+  )
+}
+
 const localeCommitMessage = "Update translations from the locale editor"
 
 // Writes both locale files as one commit. When the branch tip is a previous
@@ -177,19 +232,31 @@ const actions: Record<
   },
 
   // A fine-grained token lists only the repositories it was granted
+  // and only those with both translation files are returned
   async repositories(client) {
-    const { data } = await client.rest.repos.listForAuthenticatedUser({
-      per_page: 100,
-      page: 1,
-      sort: "updated",
-      direction: "desc",
+    // client.graphql throws on any error; a repository the token can't fully
+    // read comes back as a null node with an error, so keep the partial data
+    const { data: response } = await client.request("POST /graphql", {
+      query: repositoriesQuery,
     })
-    return data.map(({ id, name, full_name, owner }) => ({
-      id,
-      name,
-      full_name,
-      owner: owner ? { login: owner.login } : null,
-    }))
+    const nodes: (RepositoryNode | null)[] | undefined =
+      response.data?.viewer?.repositories?.nodes
+    if (!nodes) {
+      throw new HttpError(
+        502,
+        response.errors?.[0]?.message ?? "Could not list repositories"
+      )
+    }
+
+    return nodes
+      .filter((repository) => repository !== null)
+      .filter(hasTranslationFiles)
+      .map((repository) => ({
+        id: repository.databaseId,
+        name: repository.name,
+        full_name: repository.nameWithOwner,
+        owner: { login: repository.owner.login },
+      }))
   },
 
   async locales(client, args) {
