@@ -6,15 +6,11 @@ import { defineConfig } from "vite"
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Exposes GITHUB_TOKEN from .env to the client as import.meta.env.GITHUB_TOKEN
+  envPrefix: ["VITE_", "GITHUB_TOKEN"],
   resolve: {
     alias: {
       "@": resolve(import.meta.dirname, "./src"),
-    },
-  },
-  server: {
-    proxy: {
-      // GitHub API calls run in the Worker; start it with `npm run dev:worker`
-      "/api": "http://localhost:8787",
     },
   },
 })
