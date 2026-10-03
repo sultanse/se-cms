@@ -8,6 +8,7 @@ import {
   getAllRepositories,
   getPullRequestStatus,
   getRepositoryLocales,
+  isUnauthorized,
   updateLocaleBranch,
   type GithubAccount,
   type JsonObject,
@@ -112,7 +113,9 @@ export async function fetchRepositories() {
     githubStore.setState((state) => ({
       ...state,
       loading: false,
-      error,
+      error: isUnauthorized(error)
+        ? new Error("GITHUB_TOKEN is invalid, expired or revoked")
+        : error,
     }))
   }
 }
