@@ -13,7 +13,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // GitHub auth and API calls run in the Worker; start it with `npm run dev:worker`
+      // GitHub API calls run in the Worker; start it with `npm run dev:worker`
       "/api": "http://localhost:8787",
     },
   },

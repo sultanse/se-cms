@@ -4,10 +4,12 @@ import {
   createLocaleBranch,
   createLocalePullRequest,
   findOpenLocalePullRequest,
+  getAccount,
   getAllRepositories,
   getPullRequestStatus,
   getRepositoryLocales,
   updateLocaleBranch,
+  type GithubAccount,
   type JsonObject,
   type PullRequestStatus,
 } from "@/services/github"
@@ -54,6 +56,7 @@ function platformFromRepository(repository: Repositories[number]): Platform {
 }
 
 export type GithubState = {
+  account: GithubAccount | null
   repositories: Repositories
   platforms: Platform[]
   loading: boolean
@@ -63,6 +66,7 @@ export type GithubState = {
 }
 
 export const githubStore = createStore<GithubState>({
+  account: null,
   repositories: [],
   platforms: [],
   loading: false,
@@ -83,11 +87,18 @@ export async function fetchRepositories() {
   }))
 
   try {
-    const repositories = await getAllRepositories()
+    const [account, repositories] = await Promise.all([
+      getAccount(),
+      getAllRepositories(),
+    ])
+    if (repositories.length === 0) {
+      throw new Error("GITHUB_TOKEN has no access to any repositories")
+    }
     const platforms = repositories.map(platformFromRepository)
 
     githubStore.setState((state) => ({
       ...state,
+      account,
       repositories,
       platforms,
     }))

@@ -20,8 +20,7 @@
   "direction": "Page direction: left to right",
   "translationEditor": {
     "name": "Translations editor",
-    "signInTitle": "Sign in to edit translations",
-    "signInDescription": "Connect GitHub to load repositories and create pull requests.",
+    "loadFailed": "Could not load repositories",
     "language": "Language",
     "arabicOption": "Ar",
     "englishOption": "En",
@@ -87,14 +86,7 @@
     "edited": "Edited",
     "revert": "Revert",
     "saveDraft": "Save as draft",
-    "draftSaved": "Draft saved",
-    "logout": "Log out",
-    "copyCode": "Copy code",
-    "openGithub": "Open GitHub",
-    "waiting": "Waiting for authorization",
-    "retry": "Retry",
-    "connecting": "Connecting",
-    "loginWithGithub": "Sign in with GitHub"
+    "draftSaved": "Draft saved"
   },
   "footer": [
     "Privacy Policy",
